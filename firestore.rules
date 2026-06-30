@@ -1,0 +1,44 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAdmin() {
+      return request.auth != null
+             && request.auth.token.email == 'rasraj.bodake108@gmail.com';
+    }
+
+    // Community issues — anyone can read; signed-in users can create & update
+    match /issues/{issueId} {
+      allow read: if true;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null;
+      allow delete: if false;
+    }
+
+    // User profiles & stats — public read for leaderboard; users manage their own doc
+    match /users/{userId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // Feedback — anyone signed in can submit; only admin can read
+    match /feedback/{docId} {
+      allow read: if isAdmin();
+      allow create: if request.auth != null;
+      allow update, delete: if false;
+    }
+
+    // Visitor sessions — users read/write their own; only admin can read all
+    match /sessions/{userId} {
+      allow read: if isAdmin() || (request.auth != null && request.auth.uid == userId);
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Activity log — anyone signed in can append; only admin can read
+    match /activity/{docId} {
+      allow read: if isAdmin();
+      allow create: if request.auth != null;
+      allow update, delete: if false;
+    }
+  }
+}

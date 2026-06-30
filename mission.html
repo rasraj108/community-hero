@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Our Mission — CivicPulse</title>
+<meta name="description" content="Your city has a pulse. CivicPulse turns a single photo into civic action — powered by citizens, accelerated by AI." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#070a0f; --bg2:#0d1117; --panel:rgba(22,27,34,0.6);
+    --accent:#3b82f6; --accent2:#60a5fa; --accent3:#22d3ee;
+    --text:#e6edf3; --text2:#8b949e; --border:rgba(120,140,170,0.16);
+    --glow:rgba(59,130,246,0.55);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:'Inter',system-ui,sans-serif;
+    overflow-x:hidden; line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,.display{font-family:'Plus Jakarta Sans',sans-serif;letter-spacing:-0.02em;line-height:1.05}
+
+  /* Animated gradient mesh background */
+  .mesh{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+  .mesh::before,.mesh::after{
+    content:"";position:absolute;width:60vw;height:60vw;border-radius:50%;
+    filter:blur(120px);opacity:0.5;will-change:transform;
+  }
+  .mesh::before{background:radial-gradient(circle,var(--accent),transparent 60%);top:-10%;left:-10%;animation:drift1 22s ease-in-out infinite}
+  .mesh::after{background:radial-gradient(circle,var(--accent3),transparent 60%);bottom:-15%;right:-10%;animation:drift2 26s ease-in-out infinite}
+  @keyframes drift1{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(12vw,8vh) scale(1.15)}}
+  @keyframes drift2{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-10vw,-6vh) scale(1.2)}}
+
+  /* Three.js canvas */
+  #bg3d{position:fixed;inset:0;z-index:1;pointer-events:none}
+
+  /* Scroll progress */
+  .progress{position:fixed;top:0;left:0;height:3px;width:100%;transform:scaleX(0);transform-origin:0 50%;
+    background:linear-gradient(90deg,var(--accent),var(--accent3));z-index:50}
+
+  /* Cursor glow */
+  .cursor-glow{position:fixed;width:480px;height:480px;border-radius:50%;pointer-events:none;z-index:2;
+    background:radial-gradient(circle,var(--glow),transparent 65%);opacity:0.35;transform:translate(-50%,-50%);
+    transition:opacity .3s;mix-blend-mode:screen;will-change:left,top}
+
+  /* Top bar */
+  .topbar{position:fixed;top:0;left:0;right:0;z-index:40;display:flex;align-items:center;justify-content:space-between;
+    padding:18px 30px}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-family:'Plus Jakarta Sans';font-size:17px;
+    text-decoration:none;color:var(--text)}
+  .brand .dot{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-size:15px;
+    background:linear-gradient(135deg,var(--accent),var(--accent3));box-shadow:0 4px 18px var(--glow)}
+  .brand .dot svg{width:16px;height:16px}
+  .launch{display:inline-flex;align-items:center;gap:8px;text-decoration:none;color:#fff;font-weight:600;font-size:14px;
+    padding:10px 20px;border-radius:40px;background:linear-gradient(135deg,var(--accent),var(--accent-hover,#2563eb));
+    box-shadow:0 8px 26px var(--glow);transition:transform .2s, box-shadow .2s}
+  .launch:hover{transform:translateY(-2px);box-shadow:0 14px 36px var(--glow)}
+
+  /* Sections */
+  main{position:relative;z-index:3}
+  section{position:relative;padding:14vh 8vw;max-width:1200px;margin:0 auto}
+  .eyebrow{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.32em;text-transform:uppercase;
+    color:var(--accent2);margin-bottom:22px;padding:7px 16px;border:1px solid var(--border);border-radius:40px;
+    background:var(--panel);backdrop-filter:blur(10px)}
+
+  /* HERO */
+  .hero{min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;
+    padding-top:0;padding-bottom:0}
+  .hero h1{font-size:clamp(42px,9vw,118px);font-weight:800}
+  .hero h1 .line{display:block;overflow:hidden}
+  .hero h1 .word{display:inline-block}
+  .grad{background:linear-gradient(120deg,var(--accent2),var(--accent3) 60%,#a78bfa);
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  .hero p{max-width:620px;margin:30px auto 0;font-size:clamp(16px,2vw,21px);color:var(--text2)}
+  .scroll-cue{position:absolute;bottom:36px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;
+    align-items:center;gap:8px;color:var(--text2);font-size:11px;letter-spacing:.2em;text-transform:uppercase}
+  .mouse{width:24px;height:38px;border:2px solid var(--text2);border-radius:14px;position:relative}
+  .mouse::after{content:"";position:absolute;top:7px;left:50%;width:3px;height:7px;border-radius:3px;background:var(--text2);
+    transform:translateX(-50%);animation:wheel 1.6s infinite}
+  @keyframes wheel{0%{opacity:1;top:7px}100%{opacity:0;top:18px}}
+
+  /* Mission pinned statement */
+  .pin-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center}
+  .big-statement{font-size:clamp(28px,5.2vw,68px);font-weight:800;max-width:1000px}
+  .big-statement .w{opacity:.16;transition:opacity .2s;display:inline-block;margin-right:.18em}
+
+  /* Reveal */
+  .reveal{opacity:0;transform:translateY(60px)}
+  .section-title{font-size:clamp(30px,5vw,60px);font-weight:800;margin-bottom:18px}
+  .lead{font-size:clamp(16px,1.6vw,19px);color:var(--text2);max-width:680px}
+
+  /* Problem strip */
+  .problem-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px;margin-top:48px}
+  .problem-card{padding:28px;border-radius:20px;border:1px solid var(--border);background:var(--panel);
+    backdrop-filter:blur(14px)}
+  .problem-card .pc-ic{font-size:30px;margin-bottom:14px}
+  .problem-card h3{font-size:19px;margin-bottom:8px}
+  .problem-card p{font-size:14px;color:var(--text2)}
+
+  /* How it works — 3D tilt cards */
+  .pillars{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:22px;margin-top:54px;
+    perspective:1200px}
+  .pillar{position:relative;padding:36px 30px;border-radius:24px;border:1px solid var(--border);
+    background:linear-gradient(160deg,rgba(59,130,246,0.10),rgba(13,17,23,0.4));backdrop-filter:blur(16px);
+    transform-style:preserve-3d;transition:transform .15s ease, box-shadow .3s;will-change:transform}
+  .pillar:hover{box-shadow:0 30px 70px rgba(0,0,0,0.45),0 0 50px rgba(59,130,246,0.18)}
+  .pillar .num{font-family:'Plus Jakarta Sans';font-size:13px;font-weight:700;color:var(--accent2);letter-spacing:.2em}
+  .pillar .p-ic{font-size:46px;margin:14px 0 18px;transform:translateZ(40px)}
+  .pillar h3{font-size:23px;margin-bottom:10px;transform:translateZ(28px)}
+  .pillar p{font-size:14.5px;color:var(--text2);transform:translateZ(16px)}
+  .pillar .shine{position:absolute;inset:0;border-radius:24px;pointer-events:none;opacity:0;transition:opacity .3s;
+    background:radial-gradient(380px circle at var(--mx,50%) var(--my,50%),rgba(96,165,250,0.18),transparent 60%)}
+  .pillar:hover .shine{opacity:1}
+
+  /* Stats counters */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:24px;margin-top:56px;text-align:center}
+  .stat .n{font-family:'Plus Jakarta Sans';font-size:clamp(44px,6vw,76px);font-weight:800;line-height:1;
+    background:linear-gradient(120deg,var(--accent2),var(--accent3));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .stat .l{margin-top:12px;font-size:13px;color:var(--text2);letter-spacing:.05em}
+
+  /* Vision / CTA */
+  .vision{text-align:center;min-height:90vh;display:flex;flex-direction:column;justify-content:center;align-items:center}
+  .vision h2{font-size:clamp(34px,6.5vw,86px);font-weight:800;max-width:1000px}
+  .cta-row{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin-top:40px}
+  .btn-ghost{display:inline-flex;align-items:center;gap:8px;text-decoration:none;color:var(--text);font-weight:600;
+    font-size:15px;padding:14px 26px;border-radius:44px;border:1px solid var(--border);background:var(--panel);
+    transition:border-color .2s, transform .2s}
+  .btn-ghost:hover{border-color:var(--accent2);transform:translateY(-2px)}
+  .btn-big{display:inline-flex;align-items:center;gap:10px;text-decoration:none;color:#fff;font-weight:700;font-size:16px;
+    padding:16px 34px;border-radius:44px;background:linear-gradient(135deg,var(--accent),var(--accent3));
+    box-shadow:0 12px 40px var(--glow);transition:transform .2s, box-shadow .2s}
+  .btn-big:hover{transform:translateY(-3px) scale(1.02);box-shadow:0 18px 56px var(--glow)}
+
+  footer{text-align:center;padding:40px 20px 60px;color:var(--text2);font-size:13px;position:relative;z-index:3}
+  .pulse-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent3);margin-right:6px;
+    box-shadow:0 0 0 0 var(--accent3);animation:pd 1.8s infinite}
+  @keyframes pd{0%{box-shadow:0 0 0 0 rgba(34,211,238,.6)}70%{box-shadow:0 0 0 10px rgba(34,211,238,0)}100%{box-shadow:0 0 0 0 rgba(34,211,238,0)}}
+
+  @media (max-width:640px){
+    section{padding:10vh 7vw}
+    .topbar{padding:14px 18px}
+    .cursor-glow{display:none}
+    .pillar .p-ic,.pillar h3,.pillar p{transform:none}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .reveal{opacity:1;transform:none}
+    *{animation:none!important}
+  }
+</style>
+</head>
+<body>
+  <div class="progress" id="progress"></div>
+  <div class="mesh"></div>
+  <canvas id="bg3d"></canvas>
+  <div class="cursor-glow" id="cursorGlow"></div>
+
+  <header class="topbar">
+    <a href="index.html" class="brand"><span class="dot"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span> CivicPulse</a>
+    <a href="index.html" class="launch">Launch the App →</a>
+  </header>
+
+  <main>
+    <!-- HERO -->
+    <section class="hero">
+      <span class="eyebrow" data-hero>Our Mission</span>
+      <h1>
+        <span class="line"><span class="word" data-hero>Your</span> <span class="word" data-hero>city</span> <span class="word" data-hero>has</span> <span class="word" data-hero>a</span></span>
+        <span class="line"><span class="word grad" data-hero>heartbeat.</span></span>
+      </h1>
+      <p data-hero>We help it heal — turning a single photo into real civic action, powered by citizens and accelerated by AI.</p>
+      <div class="scroll-cue" data-hero><div class="mouse"></div><span>Scroll to explore</span></div>
+    </section>
+
+    <!-- MISSION STATEMENT (pinned, word-by-word reveal) -->
+    <section class="pin-wrap" id="pinSection">
+      <p class="big-statement display" id="bigStatement">Fixing your neighbourhood should be as simple as taking a photo. No forms. No waiting rooms. No being ignored.</p>
+    </section>
+
+    <!-- PROBLEM -->
+    <section>
+      <span class="eyebrow reveal">The problem</span>
+      <h2 class="section-title reveal">Local issues fall through the cracks.</h2>
+      <p class="lead reveal">Every day, broken infrastructure goes unreported — and the reports that do happen vanish into inboxes and call centres.</p>
+      <div class="problem-grid">
+        <div class="problem-card reveal" data-speed="1.06"><div class="pc-ic">🕳️</div><h3>Unreported</h3><p>Potholes and hazards stay invisible because reporting is tedious and unclear.</p></div>
+        <div class="problem-card reveal" data-speed="1.0"><div class="pc-ic">📨</div><h3>Lost in inboxes</h3><p>Complaints disappear with no tracking, no updates and no accountability.</p></div>
+        <div class="problem-card reveal" data-speed="0.94"><div class="pc-ic">🗺️</div><h3>No big picture</h3><p>Officials lack a live, prioritised map of what their city actually needs.</p></div>
+      </div>
+    </section>
+
+    <!-- HOW IT WORKS -->
+    <section>
+      <span class="eyebrow reveal">How CivicPulse works</span>
+      <h2 class="section-title reveal">One photo. Three steps. Real change.</h2>
+      <div class="pillars" id="pillars">
+        <div class="pillar reveal"><span class="shine"></span><div class="num">STEP 01</div><div class="p-ic">📸</div><h3>Snap &amp; Speak</h3><p>Take a photo or describe it by voice. Gemini AI instantly identifies the issue, severity, cost and the right department.</p></div>
+        <div class="pillar reveal"><span class="shine"></span><div class="num">STEP 02</div><div class="p-ic">📍</div><h3>Map &amp; Verify</h3><p>Your report drops onto a live community map. Neighbours verify it, and duplicates merge into one strong signal.</p></div>
+        <div class="pillar reveal"><span class="shine"></span><div class="num">STEP 03</div><div class="p-ic">✅</div><h3>Resolve &amp; Track</h3><p>Officials triage from a command center and you follow every stage — Reported → Assigned → En route → Resolved.</p></div>
+      </div>
+    </section>
+
+    <!-- IMPACT -->
+    <section>
+      <span class="eyebrow reveal">The CivicPulse difference</span>
+      <h2 class="section-title reveal">Built to turn frustration into momentum.</h2>
+      <div class="stats" id="stats">
+        <div class="stat"><div class="n" data-count="1" data-suffix="">0</div><div class="l">photo to a full report</div></div>
+        <div class="stat"><div class="n" data-count="4" data-suffix="">0</div><div class="l">live tracking stages</div></div>
+        <div class="stat"><div class="n" data-count="60" data-suffix="s">0</div><div class="l">to file a report</div></div>
+        <div class="stat"><div class="n" data-count="100" data-suffix="%">0</div><div class="l">AI-assisted triage</div></div>
+      </div>
+    </section>
+
+    <!-- VISION -->
+    <section class="vision">
+      <span class="eyebrow reveal">Our vision</span>
+      <h2 class="reveal">A city where <span class="grad">every voice</span> moves something forward.</h2>
+      <div class="cta-row reveal">
+        <a href="index.html" class="btn-big">Launch CivicPulse →</a>
+      </div>
+    </section>
+  </main>
+
+  <footer><span class="pulse-dot"></span> CivicPulse — your city has a pulse. Made for stronger communities.</footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+  <script>
+  (function(){
+    "use strict";
+    const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    /* ---------- Three.js particle hero ---------- */
+    let scene, camera, renderer, points, mouseX = 0, mouseY = 0, scrollY = 0;
+    function init3D(){
+      const canvas = document.getElementById("bg3d");
+      if (!window.THREE || !canvas) return;
+      try {
+        scene = new THREE.Scene();
+        camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 100);
+        camera.position.z = 22;
+        renderer = new THREE.WebGLRenderer({ canvas, alpha:true, antialias:true });
+        renderer.setSize(innerWidth, innerHeight);
+        renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+
+        // Particle sphere ("the pulse")
+        const COUNT = innerWidth < 700 ? 1600 : 3000;
+        const geo = new THREE.BufferGeometry();
+        const pos = new Float32Array(COUNT*3);
+        const R = 11;
+        for (let i=0;i<COUNT;i++){
+          const t = Math.acos(2*Math.random()-1);
+          const p = 2*Math.PI*Math.random();
+          const r = R*(0.86 + Math.random()*0.14);
+          pos[i*3]   = r*Math.sin(t)*Math.cos(p);
+          pos[i*3+1] = r*Math.sin(t)*Math.sin(p);
+          pos[i*3+2] = r*Math.cos(t);
+        }
+        geo.setAttribute("position", new THREE.BufferAttribute(pos,3));
+        const mat = new THREE.PointsMaterial({ size:0.085, color:0x60a5fa, transparent:true, opacity:0.9,
+          blending:THREE.AdditiveBlending, depthWrite:false });
+        points = new THREE.Points(geo, mat);
+        scene.add(points);
+
+        // a second, larger faint cyan shell
+        const geo2 = geo.clone();
+        const mat2 = new THREE.PointsMaterial({ size:0.05, color:0x22d3ee, transparent:true, opacity:0.5,
+          blending:THREE.AdditiveBlending, depthWrite:false });
+        const points2 = new THREE.Points(geo2, mat2);
+        points2.scale.set(1.25,1.25,1.25);
+        scene.add(points2);
+        points.userData.shell = points2;
+
+        animate3D();
+        addEventListener("resize", onResize);
+      } catch(e){ /* fail silently — page still works */ }
+    }
+    function onResize(){
+      if(!renderer) return;
+      camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+    }
+    function animate3D(){
+      requestAnimationFrame(animate3D);
+      if(!points) return;
+      const t = performance.now();
+      const tgtX = mouseX * 0.00045, tgtY = mouseY * 0.00045;
+      // continuous spin + subtle mouse parallax + scroll tilt
+      points.rotation.y = t * 0.00008 + tgtX * 4;
+      points.rotation.x = tgtY * 4 + scrollY * 0.0008;
+      const s = 1 + Math.sin(t * 0.0012) * 0.03; // gentle "pulse"
+      points.scale.set(s, s, s);
+      if (points.userData.shell){
+        const shell = points.userData.shell;
+        shell.rotation.y = -t * 0.00006 - tgtX * 3;
+        shell.rotation.x = points.rotation.x * 0.6;
+        shell.scale.set(1.25 * s, 1.25 * s, 1.25 * s);
+      }
+      camera.position.z = 22 + scrollY * 0.004; // camera eases back as you scroll
+      renderer.render(scene, camera);
+    }
+
+    /* ---------- Cursor glow + pointer for 3D ---------- */
+    const glow = document.getElementById("cursorGlow");
+    addEventListener("pointermove", e=>{
+      mouseX = e.clientX - innerWidth/2;
+      mouseY = e.clientY - innerHeight/2;
+      if(glow){ glow.style.left = e.clientX+"px"; glow.style.top = e.clientY+"px"; }
+    });
+    addEventListener("scroll", ()=>{ scrollY = window.scrollY || 0; }, { passive:true });
+
+    /* ---------- GSAP scroll animations ---------- */
+    function showAllWords(){ document.querySelectorAll("#bigStatement .w").forEach(w=>w.style.opacity=1); }
+    function showAllReveals(){ document.querySelectorAll(".reveal").forEach(el=>{el.style.opacity=1;el.style.transform="none";}); }
+
+    function initGSAP(){
+      if(!window.gsap){ showAllReveals(); showAllWords(); return; }
+      gsap.registerPlugin(ScrollTrigger);
+
+      // progress bar
+      gsap.to("#progress",{ scaleX:1, ease:"none",
+        scrollTrigger:{ trigger:document.body, start:"top top", end:"bottom bottom", scrub:0.3 }});
+
+      // hero intro
+      gsap.set("[data-hero]",{ opacity:0, y:40 });
+      gsap.to("[data-hero]",{ opacity:1, y:0, duration:1, ease:"power3.out", stagger:0.09, delay:0.2 });
+
+      if(reduce){ showAllReveals(); showAllWords(); return; }
+
+      // generic reveals
+      gsap.utils.toArray(".reveal").forEach(el=>{
+        gsap.to(el,{ opacity:1, y:0, duration:0.9, ease:"power3.out",
+          scrollTrigger:{ trigger:el, start:"top 85%" }});
+      });
+
+      // pinned word-by-word statement
+      const words = document.getElementById("bigStatement").querySelectorAll(".w");
+      gsap.to(words,{ opacity:1, stagger:0.08, ease:"none",
+        scrollTrigger:{ trigger:"#pinSection", start:"top top", end:"+=120%", pin:true, scrub:0.6 }});
+
+      // parallax on problem cards
+      gsap.utils.toArray("[data-speed]").forEach(el=>{
+        const sp = parseFloat(el.dataset.speed);
+        gsap.to(el,{ y:(1-sp)*120, ease:"none",
+          scrollTrigger:{ trigger:el, start:"top bottom", end:"bottom top", scrub:true }});
+      });
+
+      // counters
+      gsap.utils.toArray("#stats .n").forEach(el=>{
+        const end = parseFloat(el.dataset.count), suffix = el.dataset.suffix||"";
+        const obj = { v:0 };
+        ScrollTrigger.create({ trigger:el, start:"top 88%", once:true, onEnter:()=>{
+          gsap.to(obj,{ v:end, duration:1.6, ease:"power2.out",
+            onUpdate:()=>{ el.textContent = Math.round(obj.v) + suffix; }});
+        }});
+      });
+    }
+
+    /* ---------- 3D tilt on pillars ---------- */
+    function initTilt(){
+      if(matchMedia("(max-width:640px)").matches) return;
+      document.querySelectorAll(".pillar").forEach(card=>{
+        card.addEventListener("pointermove", e=>{
+          const r = card.getBoundingClientRect();
+          const px = (e.clientX-r.left)/r.width, py = (e.clientY-r.top)/r.height;
+          card.style.transform = `rotateY(${(px-0.5)*16}deg) rotateX(${(0.5-py)*16}deg) translateY(-6px)`;
+          card.style.setProperty("--mx", (px*100)+"%");
+          card.style.setProperty("--my", (py*100)+"%");
+        });
+        card.addEventListener("pointerleave", ()=>{ card.style.transform=""; });
+      });
+    }
+
+    /* ---------- split the big statement into words ---------- */
+    function splitStatement(){
+      const el = document.getElementById("bigStatement");
+      const text = el.textContent.trim();
+      el.innerHTML = text.split(" ").map(w=>`<span class="w">${w}</span>`).join(" ");
+    }
+
+    // boot
+    splitStatement();
+    if(!reduce) init3D();
+    initGSAP();
+    initTilt();
+  })();
+  </script>
+</body>
+</html>

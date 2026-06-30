@@ -5,15 +5,72 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CivicPulse — Community Hero</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📍</text></svg>" />
-  <link rel="stylesheet" href="style.css" />
+  <script>
+    // Apply saved theme before paint to avoid flash (default: dark)
+    (function () {
+      try {
+        var t = localStorage.getItem("civicpulse-theme") || "dark";
+        document.documentElement.setAttribute("data-theme", t);
+      } catch (e) { document.documentElement.setAttribute("data-theme", "dark"); }
+    })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+  <link rel="stylesheet" href="style.css?v=27" />
+  <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 </head>
 <body>
+
+<!-- ── PREMIUM AMBIENT LAYER ────────────────────────────────────── -->
+<div class="amb-mesh" aria-hidden="true"></div>
+<div class="amb-cursor" id="ambCursor" aria-hidden="true"></div>
+
+<!-- ── LANDING SCREEN ───────────────────────────────────────────── -->
+<div id="landingScreen" class="landing-screen">
+  <div id="landingMap"></div>
+  <div class="landing-gradient"></div>
+  <div class="landing-card">
+    <div class="lc-brand">
+      <div class="lc-icon">📍</div>
+      <div>
+        <h1 class="lc-title">CivicPulse</h1>
+        <p class="lc-sub">Community Hero</p>
+      </div>
+    </div>
+    <p class="lc-tagline">Report, track &amp; resolve community issues — powered by Gemini AI</p>
+    <div class="lc-live-bar">
+      <span class="live-pulse"></span>
+      <span id="lc-live-text">Loading live activity…</span>
+    </div>
+    <div class="lc-stats">
+      <div class="lc-stat"><span id="ls-total">—</span><label>Reported</label></div>
+      <div class="lc-stat"><span id="ls-resolved">—</span><label>Resolved</label></div>
+      <div class="lc-stat"><span id="ls-open">—</span><label>Open</label></div>
+    </div>
+    <div class="lc-divider"></div>
+    <input type="text" id="landingName" class="lc-input" placeholder="Your name (optional)" autocomplete="off" />
+    <button class="lc-google-btn" id="landingGoogleBtn">
+      <svg viewBox="0 0 24 24" width="18" height="18" style="flex-shrink:0">
+        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+      </svg>
+      Continue with Google
+    </button>
+    <button class="lc-guest-btn" id="landingGuestBtn">Explore as Guest →</button>
+    <p class="lc-disclaimer">Your reports help make communities safer and better</p>
+  </div>
+</div>
 
 <!-- ── NAV ──────────────────────────────────────────────────────── -->
 <nav class="navbar">
   <div class="nav-brand">
-    <span class="brand-icon">📍</span>
+    <span class="brand-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span>
     <span class="brand-name">CivicPulse</span>
   </div>
   <div class="nav-links">
@@ -21,15 +78,49 @@
     <button class="nav-btn" data-view="feed">Feed</button>
     <button class="nav-btn" data-view="dashboard">Dashboard</button>
     <button class="nav-btn" data-view="leaderboard">Leaderboard</button>
+    <button class="nav-btn" data-view="official">Official</button>
+    <button class="nav-btn admin-only" data-view="admin" id="adminNavBtn" style="display:none">🛡️ Admin</button>
   </div>
   <div class="nav-right">
     <div class="user-badge" id="userBadge">
       <span class="user-avatar">👤</span>
       <span class="user-points" id="userPoints">0 pts</span>
     </div>
+    <button class="nav-icon-btn nav-mobile-only" data-view="official" title="Official portal" aria-label="Official portal" data-tip="Official"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V10l7-5 7 5v11M9 21v-6h6v6"/></svg></button>
+    <button class="nav-icon-btn admin-only" data-view="admin" id="adminNavBtnMobile" aria-label="Master Control" data-tip="Master Control" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg></button>
+    <a class="nav-icon-btn" href="mission.html" aria-label="Our Mission" data-tip="Our Mission"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6L12 3Z"/><path d="M19 14l.7 1.9 1.9.7-1.9.7-.7 1.9-.7-1.9-1.9-.7 1.9-.7.7-1.9Z"/></svg></a>
+    <button class="nav-icon-btn" id="themeToggleBtn" aria-label="Toggle light or dark theme" data-tip="Theme"></button>
+    <button class="nav-icon-btn" id="shareAppBtn" aria-label="Share CivicPulse" data-tip="Share"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg></button>
+    <button class="nav-icon-btn" id="feedbackBtn" aria-label="Send feedback" data-tip="Feedback"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/></svg></button>
     <button class="btn-report-nav" id="openReportBtn">+ Report Issue</button>
+    <button class="nav-burger" id="navBurger" aria-label="Open menu" data-tip="Menu"><span></span><span></span><span></span></button>
   </div>
 </nav>
+
+<!-- ── PREMIUM MENU OVERLAY ─────────────────────────────────────── -->
+<div class="pmenu" id="pmenu" aria-hidden="true">
+  <button class="pmenu-close" id="pmenuClose" aria-label="Close menu"><span></span><span></span></button>
+  <div class="pmenu-inner">
+    <div class="pmenu-eyebrow">Navigate</div>
+    <nav class="pmenu-links">
+      <a class="pmenu-link" data-go="map"><span class="pmenu-idx">01</span><span class="pmenu-tx">Map</span><span class="pmenu-sub">Live issue map around you</span></a>
+      <a class="pmenu-link" data-go="feed"><span class="pmenu-idx">02</span><span class="pmenu-tx">Feed</span><span class="pmenu-sub">Community reports stream</span></a>
+      <a class="pmenu-link" data-go="dashboard"><span class="pmenu-idx">03</span><span class="pmenu-tx">Dashboard</span><span class="pmenu-sub">Insights &amp; AI analytics</span></a>
+      <a class="pmenu-link" data-go="leaderboard"><span class="pmenu-idx">04</span><span class="pmenu-tx">Profile</span><span class="pmenu-sub">Your impact &amp; leaderboard</span></a>
+      <a class="pmenu-link" data-go="official"><span class="pmenu-idx">05</span><span class="pmenu-tx">Official</span><span class="pmenu-sub">Triage command center</span></a>
+      <a class="pmenu-link pmenu-admin" data-go="admin" style="display:none"><span class="pmenu-idx">06</span><span class="pmenu-tx">Admin</span><span class="pmenu-sub">Master control panel</span></a>
+      <a class="pmenu-link" href="mission.html"><span class="pmenu-idx">✦</span><span class="pmenu-tx">Our Mission</span><span class="pmenu-sub">The story behind CivicPulse</span></a>
+    </nav>
+    <div class="pmenu-actions">
+      <button data-act="report" class="pmenu-act primary">＋ Report an Issue</button>
+      <button data-act="tour" class="pmenu-act">▶ How to report</button>
+      <button data-act="theme" class="pmenu-act">◐ Toggle Theme</button>
+      <button data-act="share" class="pmenu-act">↗ Share</button>
+      <button data-act="feedback" class="pmenu-act">✎ Feedback</button>
+    </div>
+    <div class="pmenu-foot"><span class="pmenu-pulse"></span> CivicPulse — your city has a pulse</div>
+  </div>
+</div>
 
 <!-- ── VIEWS ─────────────────────────────────────────────────────── -->
 <main class="main-content">
@@ -37,6 +128,13 @@
   <!-- MAP VIEW -->
   <div class="view active" id="view-map">
     <div id="map"></div>
+    <button class="map-report-cta" id="mapReportCta" onclick="document.getElementById('openReportBtn').click()">
+      <span class="mrc-icon">＋</span>
+      <span class="mrc-text"><strong>Report a Problem</strong><small>Snap a photo — AI does the rest</small></span>
+    </button>
+    <div class="map-controls-bar">
+      <button class="map-ctrl-btn" id="toggleHeatmapBtn">🔥 Heat Map</button>
+    </div>
     <div class="map-legend">
       <div class="legend-item"><span class="dot pothole"></span>Pothole</div>
       <div class="legend-item"><span class="dot streetlight"></span>Streetlight</div>
@@ -45,7 +143,7 @@
       <div class="legend-item"><span class="dot other"></span>Other</div>
     </div>
     <div class="map-stats-bar">
-      <div class="stat-chip"><span id="totalIssues">0</span> Total Issues</div>
+      <div class="stat-chip"><span id="totalIssues">0</span> Total</div>
       <div class="stat-chip resolved"><span id="resolvedIssues">0</span> Resolved</div>
       <div class="stat-chip pending"><span id="pendingIssues">0</span> Open</div>
     </div>
@@ -63,7 +161,9 @@
       </div>
     </div>
     <div class="feed-grid" id="feedGrid">
-      <div class="loading-spinner">Loading issues…</div>
+      <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-body"><div class="skeleton-line title"></div><div class="skeleton-line med"></div><div class="skeleton-line short"></div></div></div>
+      <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-body"><div class="skeleton-line title"></div><div class="skeleton-line med"></div><div class="skeleton-line short"></div></div></div>
+      <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-body"><div class="skeleton-line title"></div><div class="skeleton-line med"></div><div class="skeleton-line short"></div></div></div>
     </div>
   </div>
 
@@ -79,13 +179,26 @@
           <div class="big-stat blue"><span id="d-progress">0</span><label>In Progress</label></div>
         </div>
       </div>
+      <div class="dash-card wide weather-card">
+        <h3>Predictive Weather Risk</h3>
+        <div id="weatherAlert" class="weather-alert loading">Checking local forecast…</div>
+      </div>
       <div class="dash-card">
         <h3>By Category</h3>
-        <div class="category-bars" id="categoryBars"></div>
+        <div id="categoryChart" style="height:220px"></div>
       </div>
       <div class="dash-card">
         <h3>By Severity</h3>
-        <div class="severity-chart" id="severityChart"></div>
+        <div id="severityChart" style="height:220px"></div>
+      </div>
+      <div class="dash-card wide agent-card">
+        <div class="agent-header">
+          <h3>AI Civic Agent</h3>
+          <button class="btn-primary btn-sm" id="runAgentBtn">▶ Run Analysis</button>
+        </div>
+        <div class="agent-output" id="agentOutput">
+          <div class="agent-idle">Click "Run Analysis" to let the AI Agent scan all community issues for patterns, alerts, and predictions.</div>
+        </div>
       </div>
       <div class="dash-card wide">
         <h3>AI Insights</h3>
@@ -108,9 +221,147 @@
         <h3>Your Stats</h3>
         <div class="my-stats-grid">
           <div class="my-stat"><span id="myReports">0</span><label>Reports</label></div>
-          <div class="my-stat"><span id="myVotes">0</span><label>Upvotes Given</label></div>
+          <div class="my-stat"><span id="myVotes">0</span><label>Verifications</label></div>
           <div class="my-stat"><span id="myPoints">0</span><label>Points</label></div>
-          <div class="my-stat"><span id="myBadge">🌱 Newcomer</span><label>Badge</label></div>
+          <div class="my-stat"><span id="myBadge">New Resident</span><label>Tier</label></div>
+        </div>
+        <div class="tier-progress" id="tierProgress">
+          <div class="tier-progress-head">
+            <span id="tierLabel">Progress to next tier</span>
+            <span id="tierPct">0%</span>
+          </div>
+          <div class="tier-bar"><div class="tier-bar-fill" id="tierBarFill"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OFFICIAL PORTAL VIEW -->
+  <div class="view" id="view-official">
+    <div id="officialLock" class="access-lock" style="display:none">
+      <div class="access-lock-icon">🏛️</div>
+      <h2>Official Command Center — Restricted</h2>
+      <p>This operations console is for authorized municipal staff. Enter your access code to continue.</p>
+      <div class="access-code-row">
+        <input id="officialCode" class="access-code-input" placeholder="Access code" autocomplete="off" />
+        <button class="btn-primary" id="officialUnlockBtn">Enter portal</button>
+      </div>
+      <p class="access-lock-msg" id="officialLockMsg"></p>
+    </div>
+
+    <div id="officialPanel">
+    <div class="cmd-topbar">
+      <div class="cmd-title">
+        <h2>Triage Command Center</h2>
+        <p>Live operations — prioritize, dispatch and resolve</p>
+      </div>
+      <div class="cmd-metrics" id="cmdMetrics"></div>
+    </div>
+
+    <div class="cmd-toolbar">
+      <div class="dept-filter" id="deptFilter"></div>
+      <div class="cmd-sort">
+        <label>Sort</label>
+        <select id="cmdSort">
+          <option value="urgency">Urgency (escalated first)</option>
+          <option value="severity">AI severity</option>
+          <option value="age">Age (oldest first)</option>
+          <option value="votes">Most verified</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="bulk-bar hidden" id="bulkBar">
+      <span class="bulk-count" id="bulkCount">0 selected</span>
+      <div class="bulk-actions">
+        <select id="bulkStatus">
+          <option value="">Set status…</option>
+          <option value="open">Open</option>
+          <option value="in_progress">In Progress</option>
+          <option value="en_route">Crew En Route</option>
+          <option value="resolved">Resolved</option>
+        </select>
+        <input id="bulkCrew" placeholder="Assign crew / dept (e.g. Road Crew B)" autocomplete="off" />
+        <button class="btn-primary btn-sm" id="bulkApply">Apply to selected</button>
+        <button class="btn-secondary btn-sm" id="bulkClear">Clear</button>
+      </div>
+    </div>
+
+    <div class="cmd-layout">
+      <div class="cmd-col cmd-list">
+        <div class="cmd-list-head">
+          <label class="cmd-checkall"><input type="checkbox" id="cmdSelectAll" /> Select all</label>
+          <span id="cmdListCount"></span>
+        </div>
+        <div class="cmd-tickets" id="officialGrid"><div class="loading-spinner">Loading issues…</div></div>
+      </div>
+
+      <div class="cmd-col cmd-detail" id="cmdDetail">
+        <div class="cmd-empty">📋 Select a ticket from the list to view its full details, photo and location.</div>
+      </div>
+
+      <div class="cmd-col cmd-action">
+        <div class="cmd-action-panel" id="cmdActionPanel">
+          <div class="cmd-empty">⚙️ Action panel — select a ticket to assign, dispatch or resolve.</div>
+        </div>
+        <div class="data-chat">
+          <div class="data-chat-head">✨ Ask the AI Data Agent</div>
+          <div class="data-chat-bar">
+            <input id="dataChatInput" placeholder="Ask your city data… e.g. &quot;Top 3 problem areas?&quot;" autocomplete="off" />
+            <button id="dataChatBtn" class="btn-primary btn-sm">Ask</button>
+          </div>
+          <div class="data-chat-suggest" id="dataChatSuggest">
+            <button data-q="What are the most common types of complaints right now?">Common complaints</button>
+            <button data-q="Which locations or areas have the most unresolved issues?">Top problem areas</button>
+            <button data-q="Summarize all critical and high-severity open issues that need urgent action.">Urgent summary</button>
+            <button data-q="What is the resolution rate and how many issues are still open?">Resolution stats</button>
+          </div>
+          <div class="data-chat-answer hidden" id="dataChatAnswer"></div>
+        </div>
+      </div>
+    </div>
+    </div>
+  </div>
+
+  <!-- ADMIN MASTER CONTROL VIEW -->
+  <div class="view" id="view-admin">
+    <div id="adminLocked" class="admin-locked">
+      <div class="admin-lock-icon">🔒</div>
+      <h2>Master Control — Restricted</h2>
+      <p id="adminLockMsg">Sign in with the admin account to access the control panel.</p>
+      <button class="btn-primary" id="adminLoginBtn" style="margin-top:14px">Sign in as Admin</button>
+    </div>
+
+    <div id="adminPanel" class="admin-panel" style="display:none">
+      <div class="admin-header">
+        <div>
+          <h2>Master Control Panel</h2>
+          <p>Live view of every visitor and their activity</p>
+        </div>
+        <button class="btn-secondary" id="adminRefreshBtn">↻ Refresh</button>
+      </div>
+
+      <div class="admin-stats">
+        <div class="admin-stat"><span id="am-visitors">0</span><label>Total Visitors</label></div>
+        <div class="admin-stat"><span id="am-google">0</span><label>Google Sign-ins</label></div>
+        <div class="admin-stat"><span id="am-guest">0</span><label>Guests</label></div>
+        <div class="admin-stat"><span id="am-reports">0</span><label>Reports</label></div>
+        <div class="admin-stat"><span id="am-votes">0</span><label>Verifications</label></div>
+        <div class="admin-stat"><span id="am-feedback">0</span><label>Feedback</label></div>
+      </div>
+
+      <div class="admin-grid">
+        <div class="admin-card">
+          <h3>Visitors</h3>
+          <div class="admin-list" id="adminVisitors"><div class="loading-spinner">Loading…</div></div>
+        </div>
+        <div class="admin-card">
+          <h3>Live Activity Feed</h3>
+          <div class="admin-list" id="adminActivity"><div class="loading-spinner">Loading…</div></div>
+        </div>
+        <div class="admin-card wide">
+          <h3>Feedback Received</h3>
+          <div class="admin-list" id="adminFeedback"><div class="loading-spinner">Loading…</div></div>
         </div>
       </div>
     </div>
@@ -126,7 +377,6 @@
       <button class="modal-close" id="closeModalBtn">✕</button>
     </div>
     <div class="modal-body">
-
       <!-- Step 1: Photo -->
       <div class="step active" id="step1">
         <div class="upload-area" id="uploadArea">
@@ -143,17 +393,22 @@
           <button class="btn-secondary" id="changePhotoBtn">Change Photo</button>
         </div>
         <button class="btn-primary btn-full" id="analyzeBtn" disabled>
-          <span class="btn-icon">✨</span> Analyze with Gemini AI
+          ✨ Analyze with Gemini AI
         </button>
+        <div class="voice-divider"><span>or</span></div>
+        <button class="btn-voice btn-full" id="voiceReportBtn">🎙️ Describe the issue by voice</button>
+        <div class="voice-rec hidden" id="voiceRec">
+          <div class="voice-pulse"></div>
+          <div class="voice-rec-text" id="voiceRecText">Listening… describe the issue</div>
+          <button class="btn-secondary" id="voiceStopBtn">■ Stop &amp; Process</button>
+        </div>
       </div>
 
-      <!-- Step 2: AI Analysis Result -->
+      <!-- Step 2: Details -->
       <div class="step" id="step2">
+        <div class="dup-warning hidden" id="dupWarning"></div>
         <div class="ai-result-card" id="aiResultCard">
-          <div class="ai-analyzing">
-            <div class="spinner"></div>
-            <p>Gemini is analyzing your photo…</p>
-          </div>
+          <div class="ai-analyzing"><div class="spinner"></div><p>Gemini is analyzing your photo…</p></div>
         </div>
         <div class="form-group">
           <label>Title</label>
@@ -163,22 +418,22 @@
           <div class="form-group">
             <label>Category</label>
             <select id="issueCategory">
-              <option value="pothole">🕳️ Pothole</option>
-              <option value="streetlight">💡 Broken Streetlight</option>
-              <option value="water">💧 Water Leak</option>
-              <option value="waste">🗑️ Waste / Garbage</option>
-              <option value="road">🛣️ Road Damage</option>
-              <option value="drainage">🌊 Drainage Problem</option>
-              <option value="other">📋 Other</option>
+              <option value="pothole">Pothole</option>
+              <option value="streetlight">Broken Streetlight</option>
+              <option value="water">Water Leak</option>
+              <option value="waste">Waste / Garbage</option>
+              <option value="road">Road Damage</option>
+              <option value="drainage">Drainage Problem</option>
+              <option value="other">Other</option>
             </select>
           </div>
           <div class="form-group">
             <label>Severity</label>
             <select id="issueSeverity">
-              <option value="low">🟢 Low</option>
-              <option value="medium">🟡 Medium</option>
-              <option value="high">🔴 High</option>
-              <option value="critical">🚨 Critical</option>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+              <option value="critical">Critical</option>
             </select>
           </div>
         </div>
@@ -189,8 +444,8 @@
         <div class="form-group">
           <label>Location</label>
           <div class="location-row">
-            <input type="text" id="issueLocation" placeholder="Address or landmark" readonly />
-            <button class="btn-locate" id="locateBtn">📍 Use My Location</button>
+            <input type="text" id="issueLocation" placeholder="Address or landmark" />
+            <button class="btn-locate" id="locateBtn">📍 Locate</button>
           </div>
           <div id="locationStatus" class="location-status"></div>
         </div>
@@ -200,14 +455,16 @@
       <!-- Step 3: Success -->
       <div class="step" id="step3">
         <div class="success-screen">
-          <div class="success-icon">✅</div>
+          <div class="success-ring">
+            <svg viewBox="0 0 84 84"><circle class="ring-bg" cx="42" cy="42" r="39"/><circle class="ring-fg" cx="42" cy="42" r="39"/></svg>
+            <div class="ring-check">✅</div>
+          </div>
           <h3>Issue Reported!</h3>
           <p>Thank you for making your community better.</p>
           <div class="points-earned" id="pointsEarned">+50 points earned!</div>
           <button class="btn-primary" id="doneBtn">View on Map</button>
         </div>
       </div>
-
     </div>
   </div>
 </div>
@@ -217,18 +474,167 @@
   <div class="modal modal-wide">
     <div class="modal-header">
       <h2 id="detailTitle">Issue Details</h2>
-      <button class="modal-close" id="closeDetailBtn">✕</button>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="share-btn" id="shareIssueBtn">↗ Share</button>
+        <button class="modal-close" id="closeDetailBtn">✕</button>
+      </div>
     </div>
     <div class="modal-body" id="detailBody"></div>
   </div>
 </div>
 
+<!-- ── COMPLAINT LETTER MODAL ─────────────────────────────────────── -->
+<div class="modal-overlay" id="complaintModal">
+  <div class="modal modal-wide">
+    <div class="modal-header">
+      <h2>Formal Complaint Letter</h2>
+      <button class="modal-close" id="closeComplaintBtn">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:12px;color:#8b949e;margin-bottom:12px">AI-generated complaint letter — review and send to your local municipal corporation.</p>
+      <div class="complaint-content" id="complaintContent">Generating…</div>
+      <div style="display:flex;gap:8px;margin-top:16px">
+        <button class="btn-primary" id="copyLetterBtn">📋 Copy Letter</button>
+        <button class="btn-secondary" id="closeComplaintBtn2">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── FEEDBACK MODAL ─────────────────────────────────────────────── -->
+<div class="modal-overlay" id="feedbackModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Share Feedback</h2>
+      <button class="modal-close" id="closeFeedbackBtn">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="step active">
+        <p style="font-size:13px;color:#8b949e;margin-bottom:4px">How's your experience with CivicPulse?</p>
+        <div class="rating-row" id="ratingRow">
+          <button class="rating-emoji" data-rating="1">😞</button>
+          <button class="rating-emoji" data-rating="2">😕</button>
+          <button class="rating-emoji" data-rating="3">😐</button>
+          <button class="rating-emoji" data-rating="4">🙂</button>
+          <button class="rating-emoji" data-rating="5">😍</button>
+        </div>
+        <div class="form-group">
+          <label>What category?</label>
+          <select id="feedbackCategory">
+            <option value="general">General Feedback</option>
+            <option value="bug">Report a Bug</option>
+            <option value="feature">Feature Request</option>
+            <option value="praise">Praise</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Your feedback</label>
+          <textarea id="feedbackText" rows="4" placeholder="Tell us what you think, what could be better, or what you love…"></textarea>
+        </div>
+        <div class="form-group">
+          <label>Name (optional)</label>
+          <input type="text" id="feedbackName" placeholder="Your name" />
+        </div>
+        <button class="btn-primary btn-full" id="submitFeedbackBtn">Send Feedback</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── ONBOARDING ─────────────────────────────────────────────────── -->
+<div class="onboarding-overlay" id="onboardingOverlay">
+  <div class="onboarding-card">
+    <div class="onboarding-steps">
+      <span class="ob-step active" id="obDot1"></span>
+      <span class="ob-step" id="obDot2"></span>
+      <span class="ob-step" id="obDot3"></span>
+    </div>
+    <div class="ob-slide active" id="obSlide1">
+      <div class="ob-icon">📍</div>
+      <h2>Welcome to CivicPulse</h2>
+      <p>Your AI-powered platform for reporting, tracking, and resolving community issues — from potholes to broken streetlights.</p>
+    </div>
+    <div class="ob-slide" id="obSlide2">
+      <div class="ob-icon">📸</div>
+      <h2>AI-Powered Reporting</h2>
+      <p>Upload a photo and Gemini AI instantly categorizes the issue, assesses severity, and routes it to the right government department.</p>
+    </div>
+    <div class="ob-slide" id="obSlide3">
+      <div class="ob-icon">🏆</div>
+      <h2>Earn Points & Make Impact</h2>
+      <p>Earn 50 points per report, 5 points per verification. Rise from New Resident to Civic Champion and drive real change in your community.</p>
+    </div>
+    <div class="ob-actions">
+      <button class="btn-secondary" id="obSkipBtn">Skip</button>
+      <button class="btn-primary" id="obNextBtn">Get Started →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── CHAT ───────────────────────────────────────────────────────── -->
+<button class="chat-fab" id="chatFab" title="AI Assistant">💬</button>
+<div class="chat-panel" id="chatPanel">
+  <div class="chat-header">
+    <span>✨ CivicPulse AI Assistant</span>
+    <button class="chat-close" id="chatClose">✕</button>
+  </div>
+  <div class="chat-messages" id="chatMessages">
+    <div class="chat-bubble bot">Hi! I'm your CivicPulse AI assistant. Ask me anything about community issues, how to report problems, or local civic matters.</div>
+  </div>
+  <div class="chat-input-row">
+    <input type="text" id="chatInput" placeholder="Ask anything…" />
+    <button class="chat-send" id="chatSend">Send</button>
+  </div>
+</div>
+
+<!-- ── MOBILE BOTTOM NAV ──────────────────────────────────────────── -->
+<nav class="bottom-nav" id="bottomNav">
+  <button class="bn-item active" data-bn="map"><span class="bn-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Z"/><path d="M9 4v14M15 6v14"/></svg></span><span class="bn-lbl">Map</span></button>
+  <button class="bn-item" data-bn="feed"><span class="bn-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></span><span class="bn-lbl">Feed</span></button>
+  <button class="bn-report" id="bnReport" aria-label="Report an issue"><span class="bn-report-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span></button>
+  <button class="bn-item" data-bn="dashboard"><span class="bn-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="11" width="3" height="6" rx="1"/><rect x="12" y="7" width="3" height="10" rx="1"/><rect x="17" y="13" width="3" height="4" rx="1"/></svg></span><span class="bn-lbl">Stats</span></button>
+  <button class="bn-item" data-bn="leaderboard"><span class="bn-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v4a5 5 0 0 1-10 0V4Z"/><path d="M7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3"/></svg></span><span class="bn-lbl">Profile</span></button>
+</nav>
+
 <!-- ── TOAST ──────────────────────────────────────────────────────── -->
 <div class="toast" id="toast"></div>
 
+<!-- ── RESOLUTION-LOOP NOTIFICATION ───────────────────────────────── -->
+<div class="resolve-notif hidden" id="resolveNotif"></div>
+
+<!-- ── GUIDED SPOTLIGHT TOUR ──────────────────────────────────────── -->
+<div class="tour" id="tour" aria-hidden="true">
+  <div class="tour-hole" id="tourHole">
+    <span class="tc tl"></span><span class="tc tr"></span><span class="tc bl"></span><span class="tc br"></span>
+    <span class="tour-scan"></span>
+  </div>
+  <div class="tour-card" id="tourCard">
+    <div class="tour-meta"><span class="tour-eyebrow">Quick Tutorial</span><span class="tour-count"><span id="tourIx">1</span> / <span id="tourTotal">7</span></span></div>
+    <h3 class="tour-title" id="tourTitle"></h3>
+    <p class="tour-desc" id="tourDesc"></p>
+    <div class="tour-dots" id="tourDots"></div>
+    <div class="tour-actions">
+      <button class="tour-skip" id="tourSkip">Skip tour</button>
+      <div class="tour-nav">
+        <button class="tour-btn ghost" id="tourBack">Back</button>
+        <button class="tour-btn primary" id="tourNext">Next →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── IMAGE VIEWER (LIGHTBOX) ────────────────────────────────────── -->
+<div class="image-viewer" id="imageViewer">
+  <button class="image-viewer-close" id="imageViewerClose" aria-label="Close">&times;</button>
+  <img class="image-viewer-img" id="imageViewerImg" src="" alt="Issue photo" />
+</div>
+
 <!-- ── SCRIPTS ────────────────────────────────────────────────────── -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="config.js"></script>
-<script type="module" src="app.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script src="config.js?v=22"></script>
+<script type="module" src="app.js?v=24"></script>
+<script src="premium.js?v=4"></script>
 </body>
 </html>
